@@ -1,0 +1,292 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+#define MAX_ALUNOS 200
+#define MAX_NOME 60
+#define MAX_CURSO 40
+#define MAX_TELEFONE 20
+#define DISC 3
+
+/* ---- CORES DO TERMINAL ---- */
+#define RESET "\033[0m"
+#define VERDE "\033[32m"
+#define VERMELHO "\033[31m"
+#define AMARELO "\033[33m"
+#define CYAN "\033[36m"
+
+/* ---- STRUCT DO ALUNO ---- */
+typedef struct {
+    int ativo;
+    int id;
+    char nome[MAX_NOME];
+    int idade;
+    char curso[MAX_CURSO];
+    char telefone[MAX_TELEFONE];
+} Aluno;
+
+int main() {
+    Aluno alunos[MAX_ALUNOS];
+    float notas[MAX_ALUNOS][DISC];
+
+    int total = 0;
+    for (int i = 0; i < MAX_ALUNOS; i++) {
+        alunos[i].ativo = 0;
+        for (int j = 0; j < DISC; j++) notas[i][j] = -1.0f;
+    }
+
+    /* FUNÇÃO: SALVAR ARQUIVO */
+    #define SAVE() {\
+        FILE *f = fopen("dados.txt", "w");\
+        for (int i = 0; i < MAX_ALUNOS; i++) {\
+            if (alunos[i].ativo) {\
+                fprintf(f, "%d;%d;%s;%d;%s;%s;", alunos[i].ativo, alunos[i].id, alunos[i].nome, alunos[i].idade, alunos[i].curso, alunos[i].telefone);\
+                for (int d = 0; d < DISC; d++) fprintf(f, "%.2f;", notas[i][d]);\
+                fprintf(f, "\n");\
+            }\
+        }\
+        fclose(f);\
+    }
+
+    /* FUNÇÃO: CARREGAR ARQUIVO */
+    #define LOAD() {\
+        FILE *f = fopen("dados.txt", "r");\
+        if (!f) { printf(AMARELO "Nenhum arquivo para carregar.\n" RESET); }\
+        else {\
+            total = 0;\
+            while (!feof(f)) {\
+                int idx = total;\
+                fscanf(f, "%d;%d;%[^;];%d;%[^;];%[^;];", \
+                    &alunos[idx].ativo, &alunos[idx].id, alunos[idx].nome, &alunos[idx].idade, alunos[idx].curso, alunos[idx].telefone);\
+                for (int d = 0; d < DISC; d++) fscanf(f, "%f;", &notas[idx][d]);\
+                if (alunos[idx].ativo) total++;\
+            }\
+            fclose(f);\
+            printf(VERDE "Arquivo carregado com sucesso!\n" RESET);\
+        }\
+    }
+
+    int opcao;
+
+    LOAD();
+
+    while (1) {
+        printf(CYAN "\n========= SISTEMA COMPLETO DE CADASTRO =========\n" RESET);
+        printf("1. Cadastrar aluno\n");
+        printf("2. Listar alunos\n");
+        printf("3. Editar aluno\n");
+        printf("4. Remover aluno\n");
+        printf("5. Registrar notas\n");
+        printf("6. Relatorios\n");
+        printf("7. Ordenar listagem\n");
+        printf("8. Salvar dados\n");
+        printf("9. Carregar dados\n");
+        printf("0. Sair\nEscolha: ");
+
+        if (scanf("%d", &opcao) != 1) {
+            int c; while ((c = getchar()) != '\n' && c != EOF);
+            continue;
+        }
+
+        if (opcao == 0) { SAVE(); break; }
+
+        /* -------- CADASTRAR ALUNO -------- */
+        if (opcao == 1) {
+            int idx = -1;
+            for (int i = 0; i < MAX_ALUNOS; i++) if (!alunos[i].ativo) { idx = i; break; }
+            if (idx == -1) { printf(VERMELHO "Cheio!\n" RESET); continue; }
+
+            int id;
+            while (1) {
+                printf("ID: ");
+                scanf("%d", &id);
+                int usado = 0;
+                for (int i = 0; i < MAX_ALUNOS; i++)
+                    if (alunos[i].ativo && alunos[i].id == id) usado = 1;
+
+                if (!usado) break;
+                printf(VERMELHO "ID já existe!\n" RESET);
+            }
+
+            int c; while ((c = getchar()) != '\n' && c != EOF);
+
+            char nome[MAX_NOME];
+            printf("Nome: ");
+            fgets(nome, MAX_NOME, stdin); nome[strcspn(nome, "\n")] = 0;
+
+            char curso[MAX_CURSO];
+            printf("Curso: ");
+            fgets(curso, MAX_CURSO, stdin); curso[strcspn(curso, "\n")] = 0;
+
+            char tel[MAX_TELEFONE];
+            printf("Telefone: ");
+            fgets(tel, MAX_TELEFONE, stdin); tel[strcspn(tel, "\n")] = 0;
+
+            int idade;
+            printf("Idade: ");
+            scanf("%d", &idade);
+
+            alunos[idx].ativo = 1;
+            alunos[idx].id = id;
+            alunos[idx].idade = idade;
+            strcpy(alunos[idx].nome, nome);
+            strcpy(alunos[idx].curso, curso);
+            strcpy(alunos[idx].telefone, tel);
+
+            total++;
+            printf(VERDE "Cadastrado!\n" RESET);
+        }
+
+        /* -------- LISTAR -------- */
+        else if (opcao == 2) {
+            printf(AMARELO "\n--- LISTA DE ALUNOS ---\n" RESET);
+            for (int i = 0; i < MAX_ALUNOS; i++)
+                if (alunos[i].ativo)
+                    printf("ID:%d | Nome:%s | Curso:%s | Idade:%d | Tel:%s\n",
+                        alunos[i].id, alunos[i].nome, alunos[i].curso, alunos[i].idade, alunos[i].telefone);
+        }
+
+        /* -------- EDITAR -------- */
+        else if (opcao == 3) {
+            int id;
+            printf("ID para editar: "); scanf("%d", &id);
+            int idx = -1;
+
+            for (int i = 0; i < MAX_ALUNOS; i++)
+                if (alunos[i].ativo && alunos[i].id == id) idx = i;
+
+            if (idx == -1) { printf(VERMELHO "Nao existe!\n" RESET); continue; }
+
+            int c; while ((c = getchar()) != '\n' && c != EOF);
+
+            char novoNome[MAX_NOME];
+            printf("Novo nome (ENTER = manter): ");
+            fgets(novoNome, MAX_NOME, stdin);
+            if (strcmp(novoNome, "\n") != 0) {
+                novoNome[strcspn(novoNome, "\n")] = 0;
+                strcpy(alunos[idx].nome, novoNome);
+            }
+
+            printf("Nova idade (0 = manter): ");
+            int idade; scanf("%d", &idade);
+            if (idade > 0) alunos[idx].idade = idade;
+
+            printf(VERDE "Editado!\n" RESET);
+        }
+
+        /* -------- REMOVER -------- */
+        else if (opcao == 4) {
+            int id;
+            printf("ID para remover: "); scanf("%d", &id);
+            for (int i = 0; i < MAX_ALUNOS; i++)
+                if (alunos[i].ativo && alunos[i].id == id) {
+                    alunos[i].ativo = 0;
+                    total--;
+                    printf(VERMELHO "Removido!\n" RESET);
+                }
+        }
+
+        /* -------- REGISTRAR NOTAS -------- */
+        else if (opcao == 5) {
+            int id;
+            printf("ID do aluno: "); scanf("%d", &id);
+
+            int idx = -1;
+            for (int i = 0; i < MAX_ALUNOS; i++)
+                if (alunos[i].ativo && alunos[i].id == id) idx = i;
+
+            if (idx == -1) { printf("Nao existe!\n"); continue; }
+
+            for (int d = 0; d < DISC; d++) {
+                float n;
+                printf("Nota %d: ", d+1);
+                scanf("%f", &n);
+                if (n >= 0 && n <= 10) notas[idx][d] = n;
+            }
+
+            printf(VERDE "Notas registradas!\n" RESET);
+        }
+
+        /* -------- RELATÓRIOS -------- */
+        else if (opcao == 6) {
+            printf("\n1. Médias de todos\n");
+            printf("2. Maior nota geral\n");
+            printf("3. Aprovados (media >= 6)\n");
+            printf("Escolha: ");
+            int r; scanf("%d", &r);
+
+            if (r == 1) {
+                for (int i = 0; i < MAX_ALUNOS; i++) {
+                    if (!alunos[i].ativo) continue;
+
+                    float soma = 0; int c = 0;
+                    for (int d = 0; d < DISC; d++)
+                        if (notas[i][d] >= 0) { soma += notas[i][d]; c++; }
+
+                    if (c == 0) printf("%s sem notas.\n", alunos[i].nome);
+                    else printf("%s → media %.2f\n", alunos[i].nome, soma/c);
+                }
+            }
+
+            else if (r == 2) {
+                float maior = -1; char nome[60];
+                for (int i = 0; i < MAX_ALUNOS; i++)
+                    for (int d = 0; d < DISC; d++)
+                        if (notas[i][d] > maior) {
+                            maior = notas[i][d];
+                            strcpy(nome, alunos[i].nome);
+                        }
+                printf("Maior nota: %.2f (%s)\n", maior, nome);
+            }
+
+            else if (r == 3) {
+                printf("\n--- APROVADOS ---\n");
+                for (int i = 0; i < MAX_ALUNOS; i++) {
+                    if (!alunos[i].ativo) continue;
+                    float soma = 0; int c = 0;
+                    for (int d = 0; d < DISC; d++)
+                        if (notas[i][d] >= 0) { soma += notas[i][d]; c++; }
+                    if (c > 0 && soma/c >= 6)
+                        printf("%s (media %.2f)\n", alunos[i].nome, soma/c);
+                }
+            }
+        }
+
+        /* -------- ORDENAR -------- */
+        else if (opcao == 7) {
+            printf("1. ID\n2. Nome\n3. Idade\nEscolha: ");
+            int ord; scanf("%d", &ord);
+
+            for (int i = 0; i < MAX_ALUNOS - 1; i++) {
+                for (int j = i + 1; j < MAX_ALUNOS; j++) {
+                    if (!alunos[i].ativo || !alunos[j].ativo) continue;
+
+                    int troca = 0;
+
+                    if (ord == 1 && alunos[i].id > alunos[j].id) troca = 1;
+                    if (ord == 2 && strcmp(alunos[i].nome, alunos[j].nome) > 0) troca = 1;
+                    if (ord == 3 && alunos[i].idade > alunos[j].idade) troca = 1;
+
+                    if (troca) {
+                        Aluno tmp = alunos[i];
+                        alunos[i] = alunos[j];
+                        alunos[j] = tmp;
+
+                        for (int d = 0; d < DISC; d++) {
+                            float t = notas[i][d];
+                            notas[i][d] = notas[j][d];
+                            notas[j][d] = t;
+                        }
+                    }
+                }
+            }
+            printf(VERDE "Ordenado!\n" RESET);
+        }
+
+        else if (opcao == 8) { SAVE(); printf(VERDE "Salvo!\n" RESET); }
+        else if (opcao == 9) { LOAD(); }
+
+    } /* fim menu */
+
+    return 0;
+}
